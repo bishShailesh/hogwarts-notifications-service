@@ -1,0 +1,22 @@
+{
+  "name": "hogwarts-notifications-service",
+  "version": "1.0.0",
+  "description": "The Hogwarts Notifications Service helps Hogwarts professors and students send, receive, and manage enchanted notifications.",
+  "main": "index.js",
+  "config": {
+    "apiSpecPath": "./api/api.yaml",
+    "generatedTypesPath": "./src/gen/api.d.ts"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:api": "npx @redocly/cli lint $npm_package_config_apiSpecPath",
+    "generate:types": "dtsgen --out $npm_package_config_generatedTypesPath $npm_package_config_apiSpecPath"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@redocly/cli": "^2.5.1",
+    "dtsgenerator": "^3.19.2"
+  }
+}

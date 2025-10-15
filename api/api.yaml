@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: Hogwarts Notifications Service
+  version: 1.0.0
+  description: API for sending and receiving enchanted notifications at Hogwarts.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.hogwarts.edu/notifications
+    description: Production server
+  - url: https://dev.hogwarts.edu/notifications
+    description: Development server
+security:
+  - bearerAuth: []
+paths:
+  /notifications:
+    post:
+      operationId: createNotification
+      summary: Create and enqueue a notification
+      description: Accepts a JSON body with recipientId, recipient name, and message. Stores the notification and enqueues it for delivery.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientId
+                - recipient
+                - message
+              properties:
+                recipientId:
+                  type: string
+                  example: "user-1234"
+                recipient:
+                  type: string
+                  example: "Hermione Granger"
+                message:
+                  type: string
+                  example: "Reminder: Potions homework due tomorrow"
+      responses:
+        '201':
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '400':
+          description: Bad Request (missing or invalid fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: listNotifications
+      summary: List notifications (optionally filter by recipientId or recipient name)
+      description: Returns all notifications, optionally filtered by recipientId or recipient name and limited by the limit parameter.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "user-1234"
+        - name: recipient
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Hermione Granger"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          example: 10
+      responses:
+        '200':
+          description: List of notifications (optionally filtered)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '400':
+          description: Bad Request (invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /notifications/{id}:
+    get:
+      operationId: getNotificationById
+      summary: Get a notification by its ID
+      description: Returns a single notification by its unique ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+      responses:
+        '200':
+          description: Notification found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request (invalid ID)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+        recipientId:
+          type: string
+          example: "user-1234"
+        recipient:
+          type: string
+          example: "Hermione Granger"
+        message:
+          type: string
+          example: "Reminder: Potions homework due tomorrow"
+        status:
+          type: string
+          enum: [queued, delivered]
+          example: "queued"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-10-02T12:34:56Z"
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Bad Request: recipientId is required."
+        details:
+          type: string
+          example: "RecipientId must be a valid string."
