@@ -18,6 +18,7 @@
     "sls:offline": "npm run build && npx serverless offline --stage offline",
     "sls:offline:watch": "npx serverless offline --stage offline --reloadHandler",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "dynamodb:start:manual": "java -Djava.library.path=.dynamodb/DynamoDBLocal_lib -jar .dynamodb/DynamoDBLocal.jar -sharedDb -port 8000"
   },
   "keywords": [],
@@ -48,6 +49,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.911.0",
+    "@aws-sdk/client-sns": "^3.911.0",
     "@aws-sdk/client-sqs": "^3.911.0",
     "@aws-sdk/lib-dynamodb": "^3.911.0",
     "uuid": "^13.0.0",

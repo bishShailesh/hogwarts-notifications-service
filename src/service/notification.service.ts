@@ -1,15 +1,23 @@
 import type { INotificationRepository } from '../data/repository/notification.repository.interface';
 import type { INotificationQueue } from '../data/queue/notification.queue.interface';
+import type { INotificationSender } from '../data/sender/notification.sender.interface';
 import { NotificationFactory } from '../factory/notification.factory';
 import { logger } from '../utils/logger.util';
+import { InternalServerError } from '../utils/errors.util';
 
 export class NotificationService {
   private repo: INotificationRepository;
   private queue: INotificationQueue;
+  private sender?: INotificationSender;
 
-  constructor(repo: INotificationRepository, queue: INotificationQueue) {
+  constructor(
+    repo: INotificationRepository,
+    queue: INotificationQueue,
+    sender?: INotificationSender,
+  ) {
     this.repo = repo;
     this.queue = queue;
+    this.sender = sender;
   }
 
   async create(
@@ -35,7 +43,7 @@ export class NotificationService {
 
   async list(filter?: {
     recipientId?: string;
-    recipient?: string;
+    recipientEmail?: string;
   }): Promise<Components.Schemas.Notification[]> {
     logger.info('Listing notifications', { filter });
     const notifications = await this.repo.getAll(filter);
@@ -46,6 +54,14 @@ export class NotificationService {
   async deliver(id: string): Promise<Components.Schemas.Notification> {
     logger.info('Delivering notification', { notificationId: id });
     const notification = await this.repo.getById(id);
+
+    // Only send if sender is provided
+    if (!this.sender) {
+      throw new InternalServerError('Notification sender is not configured');
+    }
+    // Send notification via SNS
+    await this.sender.send(notification.recipientEmail, notification.message);
+
     const delivered: Components.Schemas.Notification = {
       ...notification,
       status: 'delivered',

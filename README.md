@@ -1,6 +1,6 @@
 # hogwarts-notifications-service
 
-This is a simple notification service for Hogwarts, built with Serverless. It lets you create, list, and deliver notifications to students and professors. You can run everything locally using DynamoDB Local and LocalStack for SQS.
+This is a simple notification service for Hogwarts, built with Serverless. It lets you create, list, and deliver notifications to students and professors. You can run everything locally using DynamoDB Local and LocalStack for SQS and SNS.
 
 ---
 
@@ -12,6 +12,7 @@ I picked these AWS services because they’re a good fit for a serverless, event
 - **Lambda Functions**: No need to manage servers, and they scale automatically.
 - **DynamoDB**: Fast, flexible, and works well with Lambda for storing notifications.
 - **SQS**: Lets us queue up notification deliveries so we don’t lose messages if something fails.
+- **SNS**: Enables sending notifications to email (and other endpoints) via topics.
 
 For local dev, I used DynamoDB Local and LocalStack so I don’t have to pay for AWS while testing.
 
@@ -24,9 +25,10 @@ For local dev, I used DynamoDB Local and LocalStack so I don’t have to pay for
   - `createNotification`: HTTP POST, saves notification in DynamoDB, sends a message to SQS.
   - `listNotifications`: HTTP GET, lists notifications from DynamoDB.
   - `getNotification`: HTTP GET by ID, fetches notification from DynamoDB.
-  - `deliverNotification`: Triggered by SQS, simulates delivery and updates status.
+  - `deliverNotification`: Triggered by SQS, simulates delivery, publishes to SNS (email), and updates status.
 - **DynamoDB Local**: Stores notifications.
 - **SQS (LocalStack)**: Queues notification delivery tasks.
+- **SNS (LocalStack)**: Publishes notifications to email endpoints.
 
 ---
 
@@ -34,46 +36,58 @@ For local dev, I used DynamoDB Local and LocalStack so I don’t have to pay for
 
 Below is a high-level architecture for the Hogwarts Notifications Service:
 
-                    +-------------------+
-                    |   API Gateway     |
-                    | (HTTP Endpoints)  |
-                    +---------+---------+
-                              |
-                              v
-                    +---------------------------+
-                    | Lambda: createNotification|
-                    +---------------------------+
-                              |
-                              v
-                    +-------------------+
-                    |   DynamoDB Table  |
-                    +-------------------+
-                              |
-                              v
-                    +-------------------+
-                    |     SQS Queue     |
-                    +---------+---------+
-                              |
-                              v
-            +--------------------------------------+
-            | Lambda: deliverNotification          |
-            +--------------------------------------+
-                              |
-                              v
-                    +-------------------+
-                    |   DynamoDB Table  |
-                    +-------------------+
+                +-------------------+
+                |   API Gateway     |
+                | (HTTP Endpoints)  |
+                +---------+---------+
+                          |
+                          v
+                +---------------------------+
+                | Lambda: createNotification|
+                +---------------------------+
+                          |
+                          v
+                +-------------------+
+                |   DynamoDB Table  |
+                +-------------------+
+                          |
+                          v
+                +-------------------+
+                |     SQS Queue     |
+                +---------+---------+
+                          |
+                          v
+        +--------------------------------------+
+        | Lambda: deliverNotification          |
+        +--------------------------------------+
+                          |
+                          v
+                +-------------------+
+                |   DynamoDB Table  |
+                +-------------------+
+                          |
+                          v
+                +-------------------+
+                |      SNS Topic    |
+                +-------------------+
+                          |
+                          v
+                +-------------------+
+                |   Email Endpoint  |
+                +-------------------+
 
-     +---------------------------+
-     | Lambda: listNotification  |
-     | Lambda: getNotification   |
-     +---------------------------+
-              ^         |
-              |         v
-       +-------------------+
-       |   API Gateway     |
-       | (HTTP Endpoints)  |
-       +-------------------+
++---------------------------+
+| Lambda: listNotification |
+| Lambda: getNotification |
++---------------------------+
+^ |
+| v
++-------------------+
+| API Gateway |
+| (HTTP Endpoints) |
++-------------------+
+
+---
 
 **Flow:**
 
@@ -87,7 +101,7 @@ Below is a high-level architecture for the Hogwarts Notifications Service:
   - Lambda reads notifications from DynamoDB.
 - **Deliver Notification:**
   - SQS triggers `deliverNotification` Lambda.
-  - Lambda simulates delivery and updates the notification status in DynamoDB.
+  - Lambda simulates delivery, publishes to SNS (email), and updates the notification status in DynamoDB.
 
 ---
 
@@ -106,6 +120,9 @@ cd ..
 
 # Start DynamoDB Local
 java -Djava.library.path=.dynamodb/DynamoDBLocal_lib -jar .dynamodb/DynamoDBLocal.jar -sharedDb -port 8000
+
+# Start DynamoDB Local using npn command
+npm run dynamodb:start:manual
 ```
 
 ### 2. Create DynamoDB Table
@@ -136,6 +153,16 @@ aws --endpoint-url=http://localhost:4566 sqs create-queue \
   --region us-east-1
 ```
 
+Create the SNS topic:
+
+```sh
+aws --endpoint-url=http://localhost:4566 sns create-topic \
+  --name hogwarts-notifications-topic-offline \
+  --region us-east-1
+```
+
+---
+
 ### 4. Check Everything Is Up
 
 List DynamoDB tables:
@@ -149,6 +176,14 @@ List SQS queues:
 ```sh
 aws --endpoint-url=http://localhost:4566 sqs list-queues
 ```
+
+List SNS topics:
+
+```sh
+aws --endpoint-url=http://localhost:4566 sns list-topics
+```
+
+---
 
 ### 5. Build & Run Locally
 
@@ -165,12 +200,12 @@ npm run sls:offline
 
 ### Create a Notification
 
-> `recipientId`, `recipient`, `message`, `senderId` are required!
+> `recipientId`, `recipientEmail`, `message`, `senderId` are required!
 
 ```sh
 curl -X POST http://localhost:3000/notifications \
   -H "Content-Type: application/json" \
-  -d '{"message":"Welcome to Hogwarts!", "recipient":"Hermione Granger", "recipientId":"user-1234", "senderId":"prof-snape"}'
+  -d '{"message":"Welcome to Hogwarts!", "recipientEmail":"Hermione Granger", "recipientId":"user-1234", "senderId":"prof-snape"}'
 ```
 
 ### List Notifications (with optional filters and metadata in response)

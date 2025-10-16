@@ -11,15 +11,19 @@ provider:
   region: us-east-1
   stage: ${opt:stage, 'dev'}
   environment:
-    DYNAMODB_TABLE: hogwarts-notifications-${self:provider.stage}
+    NOTIFICATION_DYNAMODB_TABLE: hogwarts-notifications-${self:provider.stage}
     NOTIFICATION_QUEUE_URL: ${self:custom.queueUrl.${self:provider.stage}}
+    NOTIFICATION_TOPIC_ARN: ${self:custom.snsTopicArn.${self:provider.stage}}
+    LOG_LEVEL: ${self:custom.logLevel.${self:provider.stage}, 'info'}
+    REGION: ${self:provider.region}
+    STAGE: ${self:provider.stage}
 
 functions:
   authorizer:
-    handler: dist/lambda/authorizer.handler
+    handler: dist/src/lambda/authorizer.handler
 
   createNotification:
-    handler: dist/lambda/create-notification.handler
+    handler: dist/src/lambda/create-notification.handler
     events:
       - http:
           path: /notifications
@@ -28,9 +32,22 @@ functions:
             type: request
             authorizerId:
               Ref: ApiGatewayAuthorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource:
+          - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
+      - Effect: Allow
+        Action:
+          - sqs:SendMessage
+        Resource:
+          - Fn::GetAtt:
+              - NotificationQueue
+              - Arn
 
   listNotifications:
-    handler: dist/lambda/list-notifications.handler
+    handler: dist/src/lambda/list-notifications.handler
     events:
       - http:
           path: /notifications
@@ -39,9 +56,15 @@ functions:
             type: request
             authorizerId:
               Ref: ApiGatewayAuthorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+        Resource:
+          - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
 
   getNotification:
-    handler: dist/lambda/get-notification.handler
+    handler: dist/src/lambda/get-notification.handler
     events:
       - http:
           path: /notifications/{id}
@@ -50,9 +73,15 @@ functions:
             type: request
             authorizerId:
               Ref: ApiGatewayAuthorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
 
   deliverNotification:
-    handler: dist/lambda/deliver-notification.handler
+    handler: dist/src/lambda/deliver-notification.handler
     events:
       - sqs:
           arn:
@@ -60,6 +89,20 @@ functions:
               - NotificationQueue
               - Arn
           batchSize: 1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource:
+          - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
+      - Effect: Allow
+        Action:
+          - sns:Publish
+        Resource:
+          - Fn::GetAtt:
+              - NotificationTopic
+              - Arn
 
 resources:
   Resources:
@@ -79,6 +122,11 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: hogwarts-notification-queue-${self:provider.stage}
+
+    NotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: hogwarts-notifications-topic-${self:provider.stage}
 
     ApiGatewayAuthorizer:
       Type: AWS::ApiGateway::Authorizer
@@ -126,3 +174,37 @@ custom:
         - - 'https://sqs.'
           - ${self:provider.region}
           - '.amazonaws.com/${aws:accountId}/hogwarts-notification-queue-prod'
+
+  snsTopicArn:
+    offline: arn:aws:sns:us-east-1:000000000000:hogwarts-notifications-topic-offline
+    dev:
+      Fn::Join:
+        - ''
+        - - 'arn:aws:sns:'
+          - ${self:provider.region}
+          - ':${aws:accountId}:hogwarts-notifications-topic-dev'
+    qa:
+      Fn::Join:
+        - ''
+        - - 'arn:aws:sns:'
+          - ${self:provider.region}
+          - ':${aws:accountId}:hogwarts-notifications-topic-qa'
+    cat:
+      Fn::Join:
+        - ''
+        - - 'arn:aws:sns:'
+          - ${self:provider.region}
+          - ':${aws:accountId}:hogwarts-notifications-topic-cat'
+    prod:
+      Fn::Join:
+        - ''
+        - - 'arn:aws:sns:'
+          - ${self:provider.region}
+          - ':${aws:accountId}:hogwarts-notifications-topic-prod'
+
+  logLevel:
+    offline: debug
+    dev: info
+    qa: warn
+    cat: error
+    prod: error

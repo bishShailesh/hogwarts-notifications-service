@@ -23,10 +23,10 @@ export const validateCreateNotificationInput = (
       errors.push('recipientId must be a string');
     }
 
-    if (!payload.recipient) {
-      errors.push('recipient is required');
-    } else if (typeof payload.recipient !== 'string') {
-      errors.push('recipient must be a string');
+    if (!payload.recipientEmail) {
+      errors.push('recipientEmail is required');
+    } else if (typeof payload.recipientEmail !== 'string') {
+      errors.push('recipientEmail must be a string');
     }
 
     if (!payload.message) {
@@ -43,3 +43,5 @@ export const validateCreateNotificationInput = (
 
   logger.debug('Validation passed');
 };
+
+export const isOffline = process.env.IS_OFFLINE === 'true' || process.env.STAGE === 'offline';
