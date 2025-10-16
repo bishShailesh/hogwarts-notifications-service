@@ -57,9 +57,9 @@ Below is a high-level architecture for the Hogwarts Notifications Service:
                 +---------+---------+
                           |
                           v
-        +--------------------------------------+
-        | Lambda: deliverNotification          |
-        +--------------------------------------+
+            +--------------------------------------+
+            | Lambda: deliverNotification          |
+            +--------------------------------------+
                           |
                           v
                 +-------------------+
@@ -76,16 +76,16 @@ Below is a high-level architecture for the Hogwarts Notifications Service:
                 |   Email Endpoint  |
                 +-------------------+
 
-+---------------------------+
-| Lambda: listNotification |
-| Lambda: getNotification |
-+---------------------------+
-^ |
-| v
-+-------------------+
-| API Gateway |
-| (HTTP Endpoints) |
-+-------------------+
+                +---------------------------+
+                | Lambda: listNotifications |
+                | Lambda: getNotification   |
+                +---------------------------+
+                          ^
+                          |
+                +-------------------+
+                |   API Gateway     |
+                | (HTTP Endpoints)  |
+                +-------------------+
 
 ---
 
@@ -265,6 +265,7 @@ This project uses [Jest](https://jestjs.io/) for unit testing.
 
 ```sh
 npm test
+```
 
 ---
 
@@ -283,4 +284,7 @@ If you want to deploy to AWS:
 - For local testing, you manually invoke the SQS Lambda.
 - No AWS charges for local dev.
 - If you get stuck, check the error messages—they’re usually pretty clear.
+
+```
+
 ```
