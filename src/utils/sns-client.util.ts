@@ -1,7 +1,7 @@
-import { SQSClient } from '@aws-sdk/client-sqs';
+import { SNSClient } from '@aws-sdk/client-sns';
 import { isOffline } from './validation.util';
 
-export const sqsClient = new SQSClient({
+export const snsClient = new SNSClient({
   region: process.env.AWS_REGION || 'us-east-1',
   endpoint: isOffline ? 'http://localhost:4566' : undefined,
 });

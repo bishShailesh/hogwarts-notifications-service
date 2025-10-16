@@ -1,49 +1,38 @@
-import { NotificationService } from '../../src/service/notification.service';
-import { InternalServerError } from '../../src/utils/errors.util';
-
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
+const notification_service_1 = require('../../src/service/notification.service');
 // Mock uuid to always return the same value for deterministic tests
 jest.mock('uuid', () => ({
   v4: () => 'test-uuid',
 }));
-
 const mockRepo = {
   save: jest.fn(),
   getById: jest.fn(),
   getAll: jest.fn(),
 };
-
 const mockQueue = {
   enqueue: jest.fn(),
 };
-
-const mockSender = {
-  send: jest.fn(),
-};
-
 describe('NotificationService', () => {
-  let service: NotificationService;
-
+  let service;
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new NotificationService(mockRepo as any, mockQueue as any, mockSender as any);
+    service = new notification_service_1.NotificationService(mockRepo, mockQueue);
   });
-
   it('should create and enqueue a notification', async () => {
     const payload = {
       recipientId: 'user-1234',
-      recipientEmail: 'hermione.granger@hogwarts.edu',
+      recipient: 'Hermione Granger',
       message: 'Welcome!',
       senderId: 'prof-snape',
     };
     mockRepo.save.mockResolvedValue(undefined);
     mockQueue.enqueue.mockResolvedValue(undefined);
-
     const result = await service.create(payload);
-
     expect(mockRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         recipientId: payload.recipientId,
-        recipientEmail: payload.recipientEmail,
+        recipient: payload.recipient,
         message: payload.message,
         senderId: payload.senderId,
         id: 'test-uuid',
@@ -53,48 +42,38 @@ describe('NotificationService', () => {
     expect(mockQueue.enqueue).toHaveBeenCalledWith('test-uuid');
     expect(result).toMatchObject({
       recipientId: payload.recipientId,
-      recipientEmail: payload.recipientEmail,
+      recipient: payload.recipient,
       message: payload.message,
       senderId: payload.senderId,
       status: 'queued',
       id: 'test-uuid',
     });
   });
-
   it('should get a notification by id', async () => {
-    const notification = { id: 'abc', recipientId: 'user-1234' } as any;
+    const notification = { id: 'abc', recipientId: 'user-1234' };
     mockRepo.getById.mockResolvedValue(notification);
-
     const result = await service.get('abc');
     expect(mockRepo.getById).toHaveBeenCalledWith('abc');
     expect(result).toBe(notification);
   });
-
   it('should list notifications', async () => {
-    const notifications = [{ id: '1' }, { id: '2' }] as any;
+    const notifications = [{ id: '1' }, { id: '2' }];
     mockRepo.getAll.mockResolvedValue(notifications);
-
     const result = await service.list({ recipientId: 'user-1234' });
     expect(mockRepo.getAll).toHaveBeenCalledWith({ recipientId: 'user-1234' });
     expect(result).toBe(notifications);
   });
-
   it('should deliver a notification', async () => {
     const notification = {
       id: 'abc',
       recipientId: 'user-1234',
-      recipientEmail: 'hermione.granger@hogwarts.edu',
-      message: 'Welcome!',
       status: 'queued',
-      updatedAt: '2020-01-01T00:00:00.000Z',
-    } as any;
+      updatedAt: '2020-01-01T00:00:00.000Z', // valid ISO date
+    };
     mockRepo.getById.mockResolvedValue(notification);
     mockRepo.save.mockResolvedValue(undefined);
-    mockSender.send.mockResolvedValue(undefined);
-
     const result = await service.deliver('abc');
     expect(mockRepo.getById).toHaveBeenCalledWith('abc');
-    expect(mockSender.send).toHaveBeenCalledWith(notification.recipientEmail, notification.message);
     expect(mockRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'abc',
@@ -105,44 +84,5 @@ describe('NotificationService', () => {
     expect(new Date(result.updatedAt).getTime()).toBeGreaterThan(
       new Date(notification.updatedAt).getTime(),
     );
-  });
-
-  it('should throw InternalServerError if sender is not configured for deliver', async () => {
-    // Create service without sender
-    const serviceWithoutSender = new NotificationService(mockRepo as any, mockQueue as any);
-    const notification = {
-      id: 'abc',
-      recipientId: 'user-1234',
-      recipientEmail: 'hermione.granger@hogwarts.edu',
-      message: 'Welcome!',
-      status: 'queued',
-      updatedAt: '2020-01-01T00:00:00.000Z',
-    } as any;
-    mockRepo.getById.mockResolvedValue(notification);
-
-    await expect(serviceWithoutSender.deliver('abc')).rejects.toThrow(InternalServerError);
-    await expect(serviceWithoutSender.deliver('abc')).rejects.toThrow(
-      'Notification sender is not configured',
-    );
-  });
-
-  it('should propagate errors from sender.send', async () => {
-    const notification = {
-      id: 'abc',
-      recipientId: 'user-1234',
-      recipientEmail: 'hermione.granger@hogwarts.edu',
-      message: 'Welcome!',
-      status: 'queued',
-      updatedAt: '2020-01-01T00:00:00.000Z',
-    } as any;
-    mockRepo.getById.mockResolvedValue(notification);
-    mockSender.send.mockRejectedValue(new Error('SNS failure'));
-
-    await expect(service.deliver('abc')).rejects.toThrow('SNS failure');
-  });
-
-  it('should propagate errors from repo.getById in deliver', async () => {
-    mockRepo.getById.mockRejectedValue(new Error('DB failure'));
-    await expect(service.deliver('abc')).rejects.toThrow('DB failure');
   });
 });

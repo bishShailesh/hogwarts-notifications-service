@@ -4,7 +4,7 @@ import { dynamoDbClient } from '../../utils/dynamodb-client.util';
 import { NotFoundError } from '../../utils/errors.util';
 import { logger } from '../../utils/logger.util';
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE!;
+const TABLE_NAME = process.env.NOTIFICATION_DYNAMODB_TABLE!;
 const dynamoDb = DynamoDBDocumentClient.from(dynamoDbClient);
 
 export class DynamoNotificationRepository implements INotificationRepository {
@@ -68,7 +68,6 @@ export class DynamoNotificationRepository implements INotificationRepository {
     const result = await dynamoDb.send(new ScanCommand(params));
     let items = (result.Items as Components.Schemas.Notification[]) || [];
 
-    // Apply limit if provided
     if (filter?.limit && !isNaN(filter.limit) && filter.limit > 0) {
       items = items.slice(0, filter.limit);
     }
