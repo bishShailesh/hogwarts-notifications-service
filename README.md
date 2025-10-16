@@ -284,7 +284,3 @@ If you want to deploy to AWS:
 - For local testing, you manually invoke the SQS Lambda.
 - No AWS charges for local dev.
 - If you get stuck, check the error messages—they’re usually pretty clear.
-
-```
-
-```
