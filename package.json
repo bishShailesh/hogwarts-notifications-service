@@ -7,12 +7,8 @@
     "apiSpecPath": "./api/api.yaml",
     "generatedTypesPath": "./src/gen/api.d.ts"
   },
-  "husky": {
-    "hooks": {
-      "pre-push": "npm run lint:api && npm run format:check && npm run lint && npm test"
-    }
-  },
   "scripts": {
+    "prepare": "husky install",
     "build": "tsc",
     "clean": "rm -rf ./src/gen",
     "lint": "eslint . --ext .ts",
