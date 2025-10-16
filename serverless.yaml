@@ -20,10 +20,10 @@ provider:
 
 functions:
   authorizer:
-    handler: dist/lambda/authorizer.handler
+    handler: dist/src/lambda/authorizer.handler
 
   createNotification:
-    handler: dist/lambda/create-notification.handler
+    handler: dist/src/lambda/create-notification.handler
     events:
       - http:
           path: /notifications
@@ -47,7 +47,7 @@ functions:
               - Arn
 
   listNotifications:
-    handler: dist/lambda/list-notifications.handler
+    handler: dist/src/lambda/list-notifications.handler
     events:
       - http:
           path: /notifications
@@ -64,7 +64,7 @@ functions:
           - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
 
   getNotification:
-    handler: dist/lambda/get-notification.handler
+    handler: dist/src/lambda/get-notification.handler
     events:
       - http:
           path: /notifications/{id}
@@ -81,7 +81,7 @@ functions:
           - arn:aws:dynamodb:${self:provider.region}:*:table/hogwarts-notifications-${self:provider.stage}
 
   deliverNotification:
-    handler: dist/lambda/deliver-notification.handler
+    handler: dist/src/lambda/deliver-notification.handler
     events:
       - sqs:
           arn:

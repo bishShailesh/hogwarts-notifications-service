@@ -255,14 +255,6 @@ curl -X POST http://localhost:3002/2015-03-31/functions/hogwarts-notifications-s
   -d '{"Records":[{"body":"{\"notificationId\":\"NOTIFICATION_ID\"}"}]}'
 ```
 
-### Publish a Message to SNS (for testing)
-
-```sh
-aws --endpoint-url=http://localhost:4566 sns publish \
-  --topic-arn arn:aws:sns:us-east-1:000000000000:hogwarts-notifications-topic-offline \
-  --message "Welcome to Hogwarts!"
-```
-
 ---
 
 ## Running Unit Tests

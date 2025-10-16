@@ -7,6 +7,11 @@
     "apiSpecPath": "./api/api.yaml",
     "generatedTypesPath": "./src/gen/api.d.ts"
   },
+  "husky": {
+    "hooks": {
+      "pre-push": "npm run lint:api && npm run format:check && npm run lint && npm test"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf ./src/gen",
@@ -18,6 +23,7 @@
     "sls:offline": "npm run build && npx serverless offline --stage offline",
     "sls:offline:watch": "npx serverless offline --stage offline --reloadHandler",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "dynamodb:start:manual": "java -Djava.library.path=.dynamodb/DynamoDBLocal_lib -jar .dynamodb/DynamoDBLocal.jar -sharedDb -port 8000"
   },
   "keywords": [],
@@ -37,6 +43,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "prettier": "^3.6.2",
     "serverless": "^4.21.0",
