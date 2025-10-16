@@ -18,7 +18,7 @@ paths:
     post:
       operationId: createNotification
       summary: Create and enqueue a notification
-      description: Accepts a JSON body with recipientId, recipient name, and message. Stores the notification and enqueues it for delivery.
+      description: Accepts a JSON body with senderId, recipientId, recipient name, and message. Stores the notification and enqueues it for delivery.
       security:
         - bearerAuth: []
       requestBody:
@@ -26,21 +26,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - recipientId
-                - recipient
-                - message
-              properties:
-                recipientId:
-                  type: string
-                  example: "user-1234"
-                recipient:
-                  type: string
-                  example: "Hermione Granger"
-                message:
-                  type: string
-                  example: "Reminder: Potions homework due tomorrow"
+              $ref: '#/components/schemas/CreateNotification'
       responses:
         '201':
           description: Notification created
@@ -68,11 +54,17 @@ paths:
                 $ref: '#/components/schemas/Error'
     get:
       operationId: listNotifications
-      summary: List notifications (optionally filter by recipientId or recipient name)
-      description: Returns all notifications, optionally filtered by recipientId or recipient name and limited by the limit parameter.
+      summary: List notifications (filter by senderId, recipientId, recipient name, and message)
+      description: Returns all notifications filtered by senderId, recipientId, recipient name, and message. Response includes metadata and notifications list.
       security:
         - bearerAuth: []
       parameters:
+        - name: senderId
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "prof-snape"
         - name: recipientId
           in: query
           required: false
@@ -85,6 +77,12 @@ paths:
           schema:
             type: string
           example: "Hermione Granger"
+        - name: message
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Reminder: Potions homework due tomorrow"
         - name: limit
           in: query
           required: false
@@ -94,13 +92,11 @@ paths:
           example: 10
       responses:
         '200':
-          description: List of notifications (optionally filtered)
+          description: List of notifications (filtered) with metadata
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Notification'
+                $ref: '#/components/schemas/NotificationListResponse'
         '400':
           description: Bad Request (invalid parameters)
           content:
@@ -160,13 +156,45 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    CreateNotification:
+      type: object
+      required:
+        - senderId
+        - recipientId
+        - recipient
+        - message
+      properties:
+        senderId:
+          type: string
+          example: "prof-snape"
+        recipientId:
+          type: string
+          example: "user-1234"
+        recipient:
+          type: string
+          example: "Hermione Granger"
+        message:
+          type: string
+          example: "Reminder: Potions homework due tomorrow"
     Notification:
       type: object
+      required:
+        - id
+        - senderId
+        - recipientId
+        - recipient
+        - message
+        - status
+        - createdAt
+        - updatedAt
       properties:
         id:
           type: string
           format: uuid
           example: "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+        senderId:
+          type: string
+          example: "prof-snape"
         recipientId:
           type: string
           example: "user-1234"
@@ -184,15 +212,49 @@ components:
           type: string
           format: date-time
           example: "2025-10-02T12:34:56Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-10-02T12:34:56Z"
+    NotificationListResponse:
+      type: object
+      properties:
+        metadata:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 25
+            returned:
+              type: integer
+              example: 10
+            filter:
+              type: object
+              additionalProperties: true
+              example:
+                recipientId: "user-1234"
+                senderId: "prof-snape"
+                limit: 10
+            limit:
+              type: integer
+              example: 10
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
     Error:
       type: object
       required:
+        - statusCode
         - code
         - message
       properties:
-        code:
+        statusCode:
           type: integer
           example: 400
+        code:
+          type: string
+          example: "BAD_REQUEST"
         message:
           type: string
           example: "Bad Request: recipientId is required."
