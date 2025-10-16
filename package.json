@@ -8,7 +8,6 @@
     "generatedTypesPath": "./src/gen/api.d.ts"
   },
   "scripts": {
-    "prepare": "husky install",
     "build": "tsc",
     "clean": "rm -rf ./src/gen",
     "lint": "eslint . --ext .ts",
@@ -39,7 +38,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.4",
-    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "prettier": "^3.6.2",
     "serverless": "^4.21.0",
