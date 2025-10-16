@@ -1,0 +1,128 @@
+service: hogwarts-notifications-service
+
+frameworkVersion: '4.21.0'
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DYNAMODB_TABLE: hogwarts-notifications-${self:provider.stage}
+    NOTIFICATION_QUEUE_URL: ${self:custom.queueUrl.${self:provider.stage}}
+
+functions:
+  authorizer:
+    handler: dist/lambda/authorizer.handler
+
+  createNotification:
+    handler: dist/lambda/create-notification.handler
+    events:
+      - http:
+          path: /notifications
+          method: post
+          authorizer:
+            type: request
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+
+  listNotifications:
+    handler: dist/lambda/list-notifications.handler
+    events:
+      - http:
+          path: /notifications
+          method: get
+          authorizer:
+            type: request
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+
+  getNotification:
+    handler: dist/lambda/get-notification.handler
+    events:
+      - http:
+          path: /notifications/{id}
+          method: get
+          authorizer:
+            type: request
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+
+  deliverNotification:
+    handler: dist/lambda/deliver-notification.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - NotificationQueue
+              - Arn
+          batchSize: 1
+
+resources:
+  Resources:
+    NotificationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: hogwarts-notifications-${self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    NotificationQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: hogwarts-notification-queue-${self:provider.stage}
+
+    ApiGatewayAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CustomJWTAuthorizer-${self:provider.stage}
+        Type: REQUEST
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        AuthorizerUri:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:apigateway:'
+              - Ref: AWS::Region
+              - ':lambda:path/2015-03-31/functions/'
+              - Fn::GetAtt:
+                  - AuthorizerLambdaFunction
+                  - Arn
+              - '/invocations'
+        IdentitySource: method.request.header.Authorization
+
+custom:
+  queueUrl:
+    offline: http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/hogwarts-notification-queue-offline
+    dev:
+      Fn::Join:
+        - ''
+        - - 'https://sqs.'
+          - ${self:provider.region}
+          - '.amazonaws.com/${aws:accountId}/hogwarts-notification-queue-dev'
+    qa:
+      Fn::Join:
+        - ''
+        - - 'https://sqs.'
+          - ${self:provider.region}
+          - '.amazonaws.com/${aws:accountId}/hogwarts-notification-queue-qa'
+    cat:
+      Fn::Join:
+        - ''
+        - - 'https://sqs.'
+          - ${self:provider.region}
+          - '.amazonaws.com/${aws:accountId}/hogwarts-notification-queue-cat'
+    prod:
+      Fn::Join:
+        - ''
+        - - 'https://sqs.'
+          - ${self:provider.region}
+          - '.amazonaws.com/${aws:accountId}/hogwarts-notification-queue-prod'

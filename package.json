@@ -8,15 +8,35 @@
     "generatedTypesPath": "./src/gen/api.d.ts"
   },
   "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf ./src/gen",
+    "build:watch": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint:api": "npx @redocly/cli lint $npm_package_config_apiSpecPath",
-    "generate:types": "dtsgen --out $npm_package_config_generatedTypesPath $npm_package_config_apiSpecPath"
+    "generate:types": "dtsgen --out $npm_package_config_generatedTypesPath $npm_package_config_apiSpecPath",
+    "sls:offline": "npm run build && npx serverless offline --stage offline",
+    "sls:offline:watch": "npx serverless offline --stage offline --reloadHandler",
+    "format": "prettier --write .",
+    "dynamodb:start:manual": "java -Djava.library.path=.dynamodb/DynamoDBLocal_lib -jar .dynamodb/DynamoDBLocal.jar -sharedDb -port 8000"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@redocly/cli": "^2.5.1",
-    "dtsgenerator": "^3.19.2"
+    "@serverless/utils": "^6.15.0",
+    "@types/aws-lambda": "^8.10.156",
+    "@types/node": "^24.7.2",
+    "dtsgenerator": "^3.19.2",
+    "prettier": "^3.6.2",
+    "serverless": "^4.21.0",
+    "serverless-offline": "^14.4.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.911.0",
+    "@aws-sdk/client-sqs": "^3.911.0",
+    "@aws-sdk/lib-dynamodb": "^3.911.0",
+    "uuid": "^13.0.0"
   }
 }
