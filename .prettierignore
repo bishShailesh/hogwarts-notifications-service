@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+api/
+src/gen/
+dynamodb-local-metadata.json
+shared-local-instance.db
+.dynamodb/
+.serverless/
+package-lock.json
+package.json
+tsconfig.json

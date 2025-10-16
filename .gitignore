@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 
 # generated files
 src/gen/
+dynamodb-local-metadata.json
+shared-local-instance.db
