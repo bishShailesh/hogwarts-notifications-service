@@ -1,0 +1,115 @@
+{
+  "info": {
+    "_postman_id": "4b03ae7c-e6f7-4ba3-9aea-275a84506ac0",
+    "name": "hogwarts-notifications-service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49310343"
+  },
+  "item": [
+    {
+      "name": "createNotification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const jsonData = pm.response.json();",
+              "pm.globals.set(\"notificationId\", jsonData.id);",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "aabbcc",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"recipientId\": \"user-1234\",\n    \"senderId\": \"sender-1234\",\n    \"recipientEmail\": \"hermione.granger@hogwarts.edu\",\n    \"message\": \"Reminder: Potions homework due tomorrow\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/offline/notifications",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["offline", "notifications"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "listNotifications",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "aabbcc",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/offline/notifications",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["offline", "notifications"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getNotification",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "aabbcc",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/offline/notifications/{{notificationId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["offline", "notifications", "{{notificationId}}"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
