@@ -1,61 +1,46 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { wrapLambdaHandler } from '../utils/lambda-wrapper.util';
+import { NotificationService } from '../service/notification.service';
+import { DynamoNotificationRepository } from '../data/repository/dynamo.notification.repository';
+import { SqsNotificationQueue } from '../data/queue/sqs.notification.queue';
+import { logger } from '../utils/logger.util';
 
-const isOffline = process.env.IS_OFFLINE === 'true' || process.env.STAGE === 'offline';
+const repo = new DynamoNotificationRepository();
+const queue = new SqsNotificationQueue();
+const service = new NotificationService(repo, queue);
 
-const dynamoDbClient = new DynamoDBClient({
-  region: isOffline ? 'localhost' : process.env.AWS_REGION || 'us-east-1',
-  endpoint: isOffline ? 'http://localhost:8000' : undefined,
-});
-const dynamoDb = DynamoDBDocumentClient.from(dynamoDbClient);
+export const handler = wrapLambdaHandler(async (event) => {
+  const { recipientId, recipient, senderId, limit } = event.queryStringParameters || {};
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE!;
+  // Build filter object from available query parameters
+  const filter: { recipientId?: string; recipient?: string; senderId?: string } = {};
+  if (recipientId) filter.recipientId = recipientId;
+  if (recipient) filter.recipient = recipient;
+  if (senderId) filter.senderId = senderId;
 
-export const handler: APIGatewayProxyHandler = async (event) => {
-  try {
-    const { recipientId, recipient, limit } = event.queryStringParameters || {};
+  logger.info('Listing notifications', { filter, limit });
 
-    // Build filter expression
-    let FilterExpression = '';
-    let ExpressionAttributeNames: Record<string, string> = {};
-    let ExpressionAttributeValues: Record<string, any> = {};
+  // Fetch notifications (filtered or all)
+  const notifications = await service.list(filter);
 
-    if (recipientId) {
-      FilterExpression += '#recipientId = :recipientId';
-      ExpressionAttributeNames['#recipientId'] = 'recipientId';
-      ExpressionAttributeValues[':recipientId'] = recipientId;
-    }
-    if (recipient) {
-      if (FilterExpression) FilterExpression += ' AND ';
-      FilterExpression += '#recipient = :recipient';
-      ExpressionAttributeNames['#recipient'] = 'recipient';
-      ExpressionAttributeValues[':recipient'] = recipient;
-    }
-
-    const scanParams: any = {
-      TableName: TABLE_NAME,
-    };
-
-    if (FilterExpression) {
-      scanParams.FilterExpression = FilterExpression;
-      scanParams.ExpressionAttributeNames = ExpressionAttributeNames;
-      scanParams.ExpressionAttributeValues = ExpressionAttributeValues;
-    }
-    if (limit) {
-      scanParams.Limit = Number(limit);
-    }
-
-    const result = await dynamoDb.send(new ScanCommand(scanParams));
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result.Items || []),
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error', error: (error as Error).message }),
-    };
+  // Apply limit only if provided and valid
+  let limitedNotifications = notifications;
+  if (limit && !isNaN(Number(limit)) && Number(limit) > 0) {
+    limitedNotifications = notifications.slice(0, Number(limit));
   }
-};
+
+  logger.info('Notifications listed', { count: limitedNotifications.length });
+
+  // Return metadata and notifications
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      metadata: {
+        total: notifications.length,
+        returned: limitedNotifications.length,
+        filter,
+        limit: limit ? Number(limit) : undefined,
+      },
+      notifications: limitedNotifications,
+    }),
+  };
+});

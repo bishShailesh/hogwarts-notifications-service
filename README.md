@@ -92,6 +92,8 @@ aws --endpoint-url=http://localhost:4566 sqs list-queues
 ### 5. Build & Run Locally
 
 ```sh
+npm i
+npm run generate:types
 npm run build
 npm run sls:offline
 ```
@@ -102,18 +104,43 @@ npm run sls:offline
 
 ### Create a Notification
 
-> `recipientId` is required!
+> `recipientId`, `recipient`, `message`, `senderId` are required!
 
 ```sh
 curl -X POST http://localhost:3000/notifications \
   -H "Content-Type: application/json" \
-  -d '{"message":"Welcome to Hogwarts!", "recipient":"harry.potter@hogwarts.edu", "recipientId":"12345"}'
+  -d '{"message":"Welcome to Hogwarts!", "recipient":"Hermione Granger", "recipientId":"user-1234", "senderId":"prof-snape"}'
 ```
 
-### List Notifications
+### List Notifications (with optional filters and metadata in response)
+
+```sh
+curl "http://localhost:3000/notifications?recipientId=user-1234&senderId=prof-snape&limit=5"
+```
+
+Or to list all notifications:
 
 ```sh
 curl http://localhost:3000/notifications
+```
+
+_Response will include:_
+```json
+{
+  "metadata": {
+    "total": 25,
+    "returned": 5,
+    "filter": {
+      "recipientId": "user-1234",
+      "senderId": "prof-snape",
+      "limit": 5
+    },
+    "limit": 5
+  },
+  "notifications": [
+    { /* notification objects */ }
+  ]
+}
 ```
 
 ### Get a Notification by ID
@@ -126,7 +153,7 @@ curl http://localhost:3000/notifications/<NOTIFICATION_ID>
 
 ```sh
 curl -X POST http://localhost:3002/2015-03-31/functions/hogwarts-notifications-service-offline-deliverNotification/invocations \
-  -d '{"Records":[{"body":"{\"notificationId\":\"YOUR_NOTIFICATION_ID\"}"}]}'
+  -d '{"Records":[{"body":"{\"notificationId\":\"NOTIFICATION_ID\"}"}]}'
 ```
 
 ---
