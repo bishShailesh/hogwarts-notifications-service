@@ -142,4 +142,3 @@ vite.config.ts.timestamp-*
 src/gen/
 dynamodb-local-metadata.json
 shared-local-instance.db
-.husky/
