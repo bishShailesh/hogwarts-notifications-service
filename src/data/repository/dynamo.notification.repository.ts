@@ -42,7 +42,7 @@ export class DynamoNotificationRepository implements INotificationRepository {
     limit?: number;
   }): Promise<Components.Schemas.Notification[]> {
     logger.debug('Fetching notifications from DynamoDB', { filter });
-    let params: any = { TableName: TABLE_NAME };
+    const params: any = { TableName: TABLE_NAME };
 
     const filterExpressions: string[] = [];
     const expressionAttributeValues: Record<string, any> = {};

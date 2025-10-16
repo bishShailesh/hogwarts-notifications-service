@@ -1,4 +1,4 @@
-import { SQSEvent, Context } from 'aws-lambda';
+import type { SQSEvent, Context } from 'aws-lambda';
 import { NotificationService } from '../service/notification.service';
 import { DynamoNotificationRepository } from '../data/repository/dynamo.notification.repository';
 import { SqsNotificationQueue } from '../data/queue/sqs.notification.queue';
@@ -8,7 +8,10 @@ const repo = new DynamoNotificationRepository();
 const queue = new SqsNotificationQueue();
 const service = new NotificationService(repo, queue);
 
-export const handler = async (event: SQSEvent, context: Context) => {
+export const handler = async (
+  event: SQSEvent,
+  context: Context,
+): Promise<{ statusCode: number }> => {
   for (const record of event.Records) {
     try {
       const body = JSON.parse(record.body);
