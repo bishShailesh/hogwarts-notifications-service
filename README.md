@@ -30,6 +30,67 @@ For local dev, I used DynamoDB Local and LocalStack so I don’t have to pay for
 
 ---
 
+## Architecture Diagram
+
+Below is a high-level architecture for the Hogwarts Notifications Service:
+
+                    +-------------------+
+                    |   API Gateway     |
+                    | (HTTP Endpoints)  |
+                    +---------+---------+
+                              |
+                              v
+                    +---------------------------+
+                    | Lambda: createNotification|
+                    +---------------------------+
+                              |
+                              v
+                    +-------------------+
+                    |   DynamoDB Table  |
+                    +-------------------+
+                              |
+                              v
+                    +-------------------+
+                    |     SQS Queue     |
+                    +---------+---------+
+                              |
+                              v
+            +--------------------------------------+
+            | Lambda: deliverNotification          |
+            +--------------------------------------+
+                              |
+                              v
+                    +-------------------+
+                    |   DynamoDB Table  |
+                    +-------------------+
+
+     +---------------------------+
+     | Lambda: listNotification  |
+     | Lambda: getNotification   |
+     +---------------------------+
+              ^         |
+              |         v
+       +-------------------+
+       |   API Gateway     |
+       | (HTTP Endpoints)  |
+       +-------------------+
+
+**Flow:**
+
+- **Create Notification:**
+  - Client sends a POST request to API Gateway.
+  - API Gateway triggers `createNotification` Lambda.
+  - Lambda stores the notification in DynamoDB and enqueues a delivery task in SQS.
+- **List/Get Notification:**
+  - Client sends a GET request to API Gateway.
+  - API Gateway triggers `listNotifications` or `getNotification` Lambda.
+  - Lambda reads notifications from DynamoDB.
+- **Deliver Notification:**
+  - SQS triggers `deliverNotification` Lambda.
+  - Lambda simulates delivery and updates the notification status in DynamoDB.
+
+---
+
 ## Local Setup: DynamoDB and SQS
 
 ### 1. DynamoDB Local
@@ -125,6 +186,7 @@ curl http://localhost:3000/notifications
 ```
 
 _Response will include:_
+
 ```json
 {
   "metadata": {
@@ -138,7 +200,9 @@ _Response will include:_
     "limit": 5
   },
   "notifications": [
-    { /* notification objects */ }
+    {
+      /* notification objects */
+    }
   ]
 }
 ```
@@ -158,6 +222,17 @@ curl -X POST http://localhost:3002/2015-03-31/functions/hogwarts-notifications-s
 
 ---
 
+## Running Unit Tests
+
+This project uses [Jest](https://jestjs.io/) for unit testing.
+
+### Run All Tests
+
+```sh
+npm test
+
+---
+
 ## Running in AWS
 
 If you want to deploy to AWS:
@@ -173,3 +248,4 @@ If you want to deploy to AWS:
 - For local testing, you manually invoke the SQS Lambda.
 - No AWS charges for local dev.
 - If you get stuck, check the error messages—they’re usually pretty clear.
+```

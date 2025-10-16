@@ -1,4 +1,4 @@
-import { APIGatewayRequestAuthorizerEvent, APIGatewayAuthorizerResult } from 'aws-lambda';
+import type { APIGatewayRequestAuthorizerEvent, APIGatewayAuthorizerResult } from 'aws-lambda';
 
 export const handler = async (
   event: APIGatewayRequestAuthorizerEvent,
